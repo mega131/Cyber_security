@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Evidence Repository & History | Forensic Analyzer{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <h2><span>📁</span> Evidence Repository & History</h2>
+    <p>Search, filter, and inspect immutable forensic evidence records stored in the SQLite ledger.</p>
+  </div>
+  <div>
+    <a href="{{ url_for('evidence.upload') }}" class="btn btn-primary">+ Ingest Evidence</a>
+  </div>
+</div>
+
+<!-- Search & Filter Controls -->
+<div class="card" style="margin-bottom: 1.5rem; padding: 1.25rem;">
+  <form method="GET" action="{{ url_for('evidence.history') }}" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+    <div style="flex: 2; min-width: 250px;">
+      <input type="text" name="q" class="form-control" placeholder="Search by Evidence ID, Filename, Case #, or Hash..." value="{{ search }}">
+    </div>
+
+    <div style="flex: 1; min-width: 180px;">
+      <select name="type" class="form-control">
+        <option value="all" {% if selected_type == 'all' %}selected{% endif %}>All Types</option>
+        <option value="Image" {% if selected_type == 'Image' %}selected{% endif %}>Images</option>
+        <option value="PDF" {% if selected_type == 'PDF' %}selected{% endif %}>PDF Documents</option>
+        <option value="Text" {% if selected_type == 'Text' %}selected{% endif %}>Plaintext / Logs</option>
+      </select>
+    </div>
+
+    <button type="submit" class="btn btn-secondary">🔍 Filter</button>
+    {% if search or (selected_type and selected_type != 'all') %}
+      <a href="{{ url_for('evidence.history') }}" class="btn btn-secondary" style="color: var(--accent-red);">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Records Table -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title"><span>🗂️</span> Ingested Evidence Ledgers ({{ records|length }} Found)</h3>
+  </div>
+
+  {% if records %}
+  <div class="table-responsive">
+    <table class="forensic-table">
+      <thead>
+        <tr>
+          <th>Evidence ID</th>
+          <th>Case Ref</th>
+          <th>Filename</th>
+          <th>Type / MIME</th>
+          <th>Size</th>
+          <th>SHA-256 Digest</th>
+          <th>Ingestion Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in records %}
+        <tr>
+          <td><span style="font-family: var(--font-mono); color: var(--accent-primary); font-weight: 700;">{{ r.evidence_id }}</span></td>
+          <td><span class="badge badge-info">{{ r.case_number }}</span></td>
+          <td><b>{{ r.original_filename }}</b></td>
+          <td>
+            <span style="font-size: 0.82rem; color: var(--text-muted);">{{ r.detected_type_label }}</span>
+          </td>
+          <td>{{ r.file_size_formatted }}</td>
+          <td>
+            <div style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+              <span>{{ r.sha256_hash[:10] }}...{{ r.sha256_hash[-8:] }}</span>
+              <button class="copy-btn" onclick="copyToClipboard('{{ r.sha256_hash }}', this)" title="Copy SHA-256">📋</button>
+            </div>
+          </td>
+          <td style="color: var(--text-muted); font-size: 0.78rem;">{{ r.created_at }}</td>
+          <td>
+            <div style="display: flex; gap: 0.4rem;">
+              <a href="{{ url_for('evidence.detail', evidence_id=r.evidence_id) }}" class="btn btn-secondary btn-sm" title="Detailed Analysis">
+                Inspect
+              </a>
+              <a href="{{ url_for('integrity.index', target=r.evidence_id) }}" class="btn btn-secondary btn-sm" title="Verify Integrity">
+                🔒
+              </a>
+              <a href="{{ url_for('reports.download_report', evidence_id=r.evidence_id) }}" class="btn btn-secondary btn-sm" title="Download PDF Report">
+                📄
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+    <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">No evidence records matched your search query.</p>
+    <a href="{{ url_for('evidence.upload') }}" class="btn btn-primary" style="margin-top: 1rem;">+ Ingest New Evidence</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

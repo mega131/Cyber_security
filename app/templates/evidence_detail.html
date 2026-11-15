@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}Evidence Analysis: {{ evidence.evidence_id }} | Forensic Analyzer{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <h2>
+      <span>🔬</span> Evidence File Analysis: 
+      <span style="font-family: var(--font-mono); color: var(--accent-primary); font-size: 1.3rem;">{{ evidence.evidence_id }}</span>
+    </h2>
+    <p>Comprehensive forensic audit, signature verification, cryptographic digests, and extracted artifacts.</p>
+  </div>
+  <div style="display: flex; gap: 0.75rem;">
+    <a href="{{ url_for('integrity.index', target=evidence.evidence_id) }}" class="btn btn-secondary">
+      🔒 Verify Integrity
+    </a>
+    <a href="{{ url_for('reports.download_report', evidence_id=evidence.evidence_id) }}" class="btn btn-primary">
+      📄 Download Forensic Report (PDF)
+    </a>
+  </div>
+</div>
+
+<!-- Signature Status Alert -->
+{% if evidence.signature_status == 'MISMATCH' %}
+<div class="alert alert-error" style="display: flex; align-items: flex-start; gap: 1rem;">
+  <span style="font-size: 1.5rem;">⚠️</span>
+  <div>
+    <strong style="font-size: 0.95rem; display: block; margin-bottom: 2px;">FILE SIGNATURE ANOMALY DETECTED (POTENTIAL SPOOFING)</strong>
+    <span>{{ evidence.signature_details }}</span>
+  </div>
+</div>
+{% elif evidence.signature_status == 'MATCH' %}
+<div class="alert alert-success" style="display: flex; align-items: flex-start; gap: 1rem;">
+  <span style="font-size: 1.5rem;">✓</span>
+  <div>
+    <strong style="font-size: 0.95rem; display: block; margin-bottom: 2px;">FILE SIGNATURE VERIFIED</strong>
+    <span>{{ evidence.signature_details }}</span>
+  </div>
+</div>
+{% endif %}
+
+<!-- Primary File Attributes & Chain of Custody -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+  <!-- File Attributes -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title"><span>📋</span> Evidence File Specifications</h3>
+      <span class="badge badge-info">{{ evidence.detected_type_label }}</span>
+    </div>
+    <table class="forensic-table">
+      <tbody>
+        <tr>
+          <td style="color: var(--text-muted); width: 40%; font-weight: 600;">Original Filename</td>
+          <td><b>{{ evidence.original_filename }}</b></td>
+        </tr>
+        <tr>
+          <td style="color: var(--text-muted); font-weight: 600;">Vault Storage Ref</td>
+          <td><span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-dim);">{{ evidence.stored_filename }}</span></td>
+        </tr>
+        <tr>
+          <td style="color: var(--text-muted); font-weight: 600;">File Size</td>
+          <td>{{ evidence.file_size_formatted }} ({{ "{:,}".format(evidence.file_size_bytes) }} bytes)</td>
+        </tr>
+        <tr>
+          <td style="color: var(--text-muted); font-weight: 600;">Declared Extension</td>
+          <td>.{{ evidence.file_extension }} (MIME: {{ evidence.declared_mime }})</td>
+        </tr>
+        <tr>
+          <td style="color: var(--text-muted); font-weight: 600;">Detected MIME Type</td>
+          <td><span style="font-family: var(--font-mono); color: var(--accent-primary); font-weight: 600;">{{ evidence.detected_mime }}</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Chain of Custody Intake -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title"><span>🏛️</span> Chain of Custody & Intake Record</h3>
+    </div>
+    <table class="forensic-table">
+      <tbody>
+        <tr>
+          <td style="color: var(--text-muted); width: 40%; font-weight: 600;">Case Number</td>
+          <td><b>{{ evidence.case_number }}</b></td>
+        </tr>
+        <tr>
+          <td style="color: var(--text-muted); font-weight: 600;">Examiner / Investigator</td>
+          <td>{{ evidence.examiner_name }}</td>
+        </tr>
+        <tr>
+          <td style="color: var(--text-muted); font-weight: 600;">Ingestion Timestamp</td>
+          <td>{{ evidence.created_at }} UTC</td>
+        </tr>
+        <tr>
+          <td style="color: var(--text-muted); font-weight: 600;">Access Permission</td>
+          <td><span class="badge badge-success">READ-ONLY (0444)</span></td>
+        </tr>
+        <tr>
+          <td style="color: var(--text-muted); font-weight: 600;">Investigator Notes</td>
+          <td>{{ evidence.notes or 'No initial notes recorded.' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Cryptographic Hashes Section -->
+<div class="card" style="margin-bottom: 1.5rem;">
+  <div class="card-header">
+    <h3 class="card-title"><span>🔐</span> Cryptographic Digests (Baseline Hashes)</h3>
+    <span style="font-size: 0.75rem; color: var(--text-dim); font-weight: 600;">Generated via Python <code>hashlib</code> (Chunked Binary Stream)</span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 1rem;">
+    <div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+        <label class="form-label" style="margin: 0; color: var(--accent-primary); font-weight: 700;">SHA-256 Digest (Primary Baseline - 256 bits)</label>
+        <span style="font-size: 0.75rem; color: var(--text-dim); font-weight: 500;">Recommended for Court Evidence Validation</span>
+      </div>
+      <div class="mono-box">
+        <span id="sha256Text">{{ evidence.sha256_hash }}</span>
+        <button class="copy-btn" onclick="copyToClipboard('{{ evidence.sha256_hash }}', this)">📋 Copy</button>
+      </div>
+    </div>
+
+    <div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+        <label class="form-label" style="margin: 0; color: #2563eb; font-weight: 700;">MD5 Digest (Legacy Integrity Reference - 128 bits)</label>
+        <span style="font-size: 0.75rem; color: var(--text-dim); font-weight: 500;">Historical Cross-Verification</span>
+      </div>
+      <div class="mono-box">
+        <span id="md5Text">{{ evidence.md5_hash }}</span>
+        <button class="copy-btn" onclick="copyToClipboard('{{ evidence.md5_hash }}', this)">📋 Copy</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Extracted Metadata Section -->
+<div class="card" style="margin-bottom: 1.5rem;">
+  <div class="card-header">
+    <h3 class="card-title"><span>🧩</span> Extracted Metadata & File System Artifacts</h3>
+  </div>
+
+  {% set meta = evidence.metadata %}
+  {% if meta %}
+    <!-- File System Timestamps -->
+    {% if meta.timestamps %}
+    <h4 style="color: var(--text-muted); font-size: 0.8rem; font-weight: 700; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
+      Host Filesystem Timestamps
+    </h4>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem;">
+      <div style="background: #f8fafc; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--border-color);">
+        <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-dim);">Created (ctime)</div>
+        <div style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600; color: var(--text-main); margin-top: 3px;">{{ meta.timestamps.os_creation_time }}</div>
+      </div>
+      <div style="background: #f8fafc; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--border-color);">
+        <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-dim);">Modified (mtime)</div>
+        <div style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600; color: var(--text-main); margin-top: 3px;">{{ meta.timestamps.os_modification_time }}</div>
+      </div>
+      <div style="background: #f8fafc; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--border-color);">
+        <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-dim);">Accessed (atime)</div>
+        <div style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600; color: var(--text-main); margin-top: 3px;">{{ meta.timestamps.os_access_time }}</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Format-Specific Attributes -->
+    {% if meta.attributes %}
+    <h4 style="color: var(--text-muted); font-size: 0.8rem; font-weight: 700; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
+      {{ meta.category }} Attributes
+    </h4>
+    <table class="forensic-table" style="margin-bottom: 1.5rem;">
+      <thead>
+        <tr>
+          <th style="width: 35%;">Attribute</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for k, v in meta.attributes.items() %}
+        {% if k != 'Preview' %}
+        <tr>
+          <td style="color: var(--text-muted); font-weight: 600;">{{ k }}</td>
+          <td><b>{{ v }}</b></td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    <!-- Text Preview if applicable -->
+    {% if meta.attributes and meta.attributes.Preview %}
+    <h4 style="color: var(--text-muted); font-size: 0.8rem; font-weight: 700; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
+      Text Content Preview (First 500 characters)
+    </h4>
+    <pre class="code-preview">{{ meta.attributes.Preview }}</pre>
+    {% endif %}
+
+    <!-- Image EXIF Tags -->
+    {% if meta.exif %}
+    <h4 style="color: var(--text-muted); font-size: 0.8rem; font-weight: 700; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
+      Embedded EXIF Tags (Pillow Extraction)
+    </h4>
+    <div class="table-responsive" style="margin-bottom: 1.5rem;">
+      <table class="forensic-table">
+        <thead>
+          <tr>
+            <th style="width: 35%;">EXIF Tag</th>
+            <th>Recorded Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for k, v in meta.exif.items() %}
+          <tr>
+            <td style="color: var(--text-muted); font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600;">{{ k }}</td>
+            <td style="word-break: break-all;">{{ v }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    <!-- Image GPS Info -->
+    {% if meta.gps %}
+    <h4 style="color: var(--accent-primary); font-size: 0.8rem; font-weight: 700; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
+      📍 Geolocation (EXIF GPS) Data
+    </h4>
+    <table class="forensic-table" style="margin-bottom: 1.5rem;">
+      <tbody>
+        {% for k, v in meta.gps.items() %}
+        <tr>
+          <td style="color: var(--text-muted); width: 35%; font-weight: 600;">{{ k }}</td>
+          <td>
+            {% if k == 'Google Maps Link' %}
+              <a href="{{ v }}" target="_blank" rel="noopener noreferrer" style="color: var(--accent-primary); font-weight: 600; text-decoration: underline;">
+                Open Coordinates in Maps &nearr;
+              </a>
+            {% else %}
+              <b>{{ v }}</b>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    <!-- PDF Document Info -->
+    {% if meta.doc_info %}
+    <h4 style="color: var(--text-muted); font-size: 0.8rem; font-weight: 700; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
+      PDF Document Catalog Properties
+    </h4>
+    <table class="forensic-table" style="margin-bottom: 1.5rem;">
+      <thead>
+        <tr>
+          <th style="width: 35%;">Property</th>
+          <th>Extracted Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for k, v in meta.doc_info.items() %}
+        <tr>
+          <td style="color: var(--text-muted); font-weight: 600;">{{ k }}</td>
+          <td>{{ v }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+  {% else %}
+    <p style="color: var(--text-muted); font-size: 0.88rem;">No specialized metadata parsed for this file.</p>
+  {% endif %}
+</div>
+
+<!-- Evidentiary Disclaimers -->
+<div class="card" style="background: #f8fafc; border-color: var(--border-color);">
+  <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+    <span>⚖️</span> Forensic Evidentiary Limitations
+  </h4>
+  <p style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.6;">
+    1. <b>Integrity Baseline:</b> A matching cryptographic hash proves that the file has not suffered bit-level degradation or modification since being ingested into this system. It does not certify that the evidence was genuine or uncompromised prior to acquisition.<br/>
+    2. <b>Metadata & Timestamps:</b> Extracted EXIF tags, authors, and system timestamps reflect header parameters that can be manipulated or affected by incorrect device clock configurations. They should be corroborated with system event logs.
+  </p>
+</div>
+{% endblock %}

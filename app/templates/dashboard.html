@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | Digital Forensic Evidence Analyzer{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <h2><span>🛡️</span> Forensic Operations Dashboard</h2>
+    <p>Operational summary of ingested digital evidence, cryptographic baselines, and integrity audits.</p>
+  </div>
+  <div>
+    <a href="{{ url_for('evidence.upload') }}" class="btn btn-primary">+ Ingest Evidence</a>
+  </div>
+</div>
+
+<!-- Stat Cards Grid -->
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-info">
+      <h3>Total Evidence Analyzed</h3>
+      <div class="stat-value">{{ metrics.total_count }}</div>
+    </div>
+    <div class="stat-icon cyan">🗄️</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-info">
+      <h3>Total Vault Size</h3>
+      <div class="stat-value">{{ (metrics.total_bytes / 1024 / 1024) | round(2) }} MB</div>
+    </div>
+    <div class="stat-icon blue">💾</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-info">
+      <h3>Integrity Checks Passed</h3>
+      <div class="stat-value" style="color: var(--accent-green);">{{ metrics.matched_count }}</div>
+    </div>
+    <div class="stat-icon green">✓</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-info">
+      <h3>Hash Mismatches Detected</h3>
+      <div class="stat-value" style="color: var(--accent-red);">{{ metrics.mismatch_count }}</div>
+    </div>
+    <div class="stat-icon amber">⚠️</div>
+  </div>
+</div>
+
+<!-- Charts Section -->
+<div class="charts-grid">
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title"><span>📊</span> Evidence Distribution by Type</h3>
+    </div>
+    <div style="height: 240px; position: relative;">
+      <canvas id="typeChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title"><span>🔒</span> Integrity Audit Outcomes</h3>
+    </div>
+    <div style="height: 240px; position: relative;">
+      <canvas id="integrityChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Supported Formats & Capabilities -->
+<div class="card" style="margin-bottom: 2rem;">
+  <div class="card-header">
+    <h3 class="card-title"><span>🔍</span> Supported Evidence Formats & Inspection Capabilities</h3>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; font-size: 0.88rem;">
+    <div style="background: #f8fafc; padding: 1.1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+      <h4 style="color: var(--accent-primary); font-weight: 700; margin-bottom: 0.4rem;">🖼️ Digital Images</h4>
+      <p style="color: var(--text-dim); font-size: 0.8rem; margin-bottom: 0.6rem;">JPG, JPEG, PNG, GIF, BMP, WEBP, TIFF</p>
+      <ul style="list-style-position: inside; color: var(--text-body); font-size: 0.82rem; line-height: 1.6;">
+        <li>Magic header signature validation</li>
+        <li>EXIF metadata (Camera, Lens, Settings)</li>
+        <li>GPS Coordinates & Decimal mapping</li>
+      </ul>
+    </div>
+
+    <div style="background: #f8fafc; padding: 1.1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+      <h4 style="color: #2563eb; font-weight: 700; margin-bottom: 0.4rem;">📄 Document Evidence</h4>
+      <p style="color: var(--text-dim); font-size: 0.8rem; margin-bottom: 0.6rem;">PDF Documents (%PDF-)</p>
+      <ul style="list-style-position: inside; color: var(--text-body); font-size: 0.82rem; line-height: 1.6;">
+        <li>PDF structure & header integrity</li>
+        <li>Document Author, Producer & Creator</li>
+        <li>Page counts & encryption flag</li>
+      </ul>
+    </div>
+
+    <div style="background: #f8fafc; padding: 1.1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+      <h4 style="color: var(--accent-green); font-weight: 700; margin-bottom: 0.4rem;">📝 Text & System Logs</h4>
+      <p style="color: var(--text-dim); font-size: 0.8rem; margin-bottom: 0.6rem;">TXT, LOG, CSV, JSON, MD, XML</p>
+      <ul style="list-style-position: inside; color: var(--text-body); font-size: 0.82rem; line-height: 1.6;">
+        <li>Character encoding detection</li>
+        <li>Newline convention analysis (CRLF vs LF)</li>
+        <li>Line and character statistics</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Evidence Records Table -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title"><span>🕒</span> Recent Evidence Ingestions</h3>
+    <a href="{{ url_for('evidence.history') }}" class="btn btn-secondary btn-sm">View All Records &rarr;</a>
+  </div>
+
+  {% if metrics.recent_evidence %}
+  <div class="table-responsive">
+    <table class="forensic-table">
+      <thead>
+        <tr>
+          <th>Evidence ID</th>
+          <th>Original File</th>
+          <th>Type / Format</th>
+          <th>Size</th>
+          <th>SHA-256 Digest Preview</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in metrics.recent_evidence %}
+        <tr>
+          <td><span style="font-family: var(--font-mono); color: var(--accent-primary); font-weight: 600;">{{ item.evidence_id }}</span></td>
+          <td><b>{{ item.original_filename }}</b></td>
+          <td>{{ item.detected_type_label }}</td>
+          <td>{{ item.file_size_formatted }}</td>
+          <td>
+            <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">
+              {{ item.sha256_hash[:12] }}...{{ item.sha256_hash[-8:] }}
+            </span>
+          </td>
+          <td>
+            {% if item.signature_status == 'MATCH' %}
+              <span class="badge badge-success">SIG VALID</span>
+            {% elif item.signature_status == 'MISMATCH' %}
+              <span class="badge badge-danger">SIG MISMATCH</span>
+            {% else %}
+              <span class="badge badge-warning">GENERIC</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{{ url_for('evidence.detail', evidence_id=item.evidence_id) }}" class="btn btn-secondary btn-sm">Inspect</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+    <p style="font-size: 1.05rem; font-weight: 600; margin-bottom: 0.4rem; color: var(--text-main);">No evidence files have been ingested yet.</p>
+    <p style="font-size: 0.88rem; margin-bottom: 1.5rem;">Upload evidence files to generate forensic hashes and establish an initial baseline.</p>
+    <a href="{{ url_for('evidence.upload') }}" class="btn btn-primary">+ Ingest First Evidence</a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Mandatory Forensic Note -->
+<div class="forensic-callout">
+  <strong>Forensic Integrity Note:</strong> Uploaded evidence is stored in an isolated vault in read-only mode to prevent bitstream alteration. MD5 and SHA-256 digests establish the baseline for future chain-of-custody verification.
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

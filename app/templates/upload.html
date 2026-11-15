@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Evidence Ingestion | Digital Forensic Evidence Analyzer{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <h2><span>📥</span> Evidence Ingestion & Intake</h2>
+    <p>Upload digital artifacts for cryptographic hashing, magic signature verification, and forensic metadata extraction.</p>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+  <!-- Upload Form -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title"><span>📂</span> Evidence Submission Portal</h3>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data">
+      <div class="form-group">
+        <label class="form-label">Digital Evidence File *</label>
+        <div class="dropzone">
+          <input type="file" name="evidence_file" class="file-input" required id="evidenceFileInput">
+          <div class="dropzone-icon">⇪</div>
+          <h3 class="dropzone-text">Drag & drop evidence file here, or click to browse</h3>
+          <p>Accepted: Images (.jpg, .png, .gif, .webp), Documents (.pdf), Plaintext (.txt, .log, .csv, .json)</p>
+          <p style="margin-top: 6px; font-size: 0.75rem; color: var(--accent-primary); font-weight: 600;">Maximum file size: 32 MB</p>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label" for="case_number">Case Reference Number</label>
+          <input type="text" name="case_number" id="case_number" class="form-control" placeholder="e.g. CASE-2026-089" value="CASE-2026-001">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="examiner_name">Investigator / Examiner</label>
+          <input type="text" name="examiner_name" id="examiner_name" class="form-control" placeholder="e.g. Detective / Analyst Name" value="Forensic Analyst">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="notes">Chain of Custody / Intake Notes</label>
+        <textarea name="notes" id="notes" class="form-control" rows="3" placeholder="Source of evidence, seizure location, or preliminary case notes..."></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+        <a href="{{ url_for('dashboard.index') }}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">⚡ Ingest & Perform Forensic Analysis</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Intake Protocols Sidebar -->
+  <div>
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <h3 class="card-title"><span>🛡️</span> Ingestion Protocols</h3>
+      </div>
+      <ul style="list-style-type: none; font-size: 0.84rem; line-height: 1.7; color: var(--text-muted);">
+        <li style="margin-bottom: 0.75rem;">
+          <b style="color: var(--text-main);">1. Non-Destructive Acquisition:</b> Files are read-only streamed and preserved in a secured vault directory without modification.
+        </li>
+        <li style="margin-bottom: 0.75rem;">
+          <b style="color: var(--text-main);">2. Dual Hash Generation:</b> Both MD5 (128-bit) and SHA-256 (256-bit) are computed immediately to establish bitstream baseline.
+        </li>
+        <li style="margin-bottom: 0.75rem;">
+          <b style="color: var(--text-main);">3. Magic Byte Analysis:</b> File headers are evaluated against known file signatures to identify spoofed extensions.
+        </li>
+        <li>
+          <b style="color: var(--text-main);">4. Deep Metadata Triage:</b> EXIF, GPS tags, document catalog properties, or character statistics are parsed.
+        </li>
+      </ul>
+    </div>
+
+    <div class="card" style="border-left: 3px solid var(--accent-amber);">
+      <h4 style="font-size: 0.88rem; color: var(--accent-amber); margin-bottom: 0.5rem;">⚖️ Evidentiary Standard Notice</h4>
+      <p style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
+        Intake establishes an internal baseline. A matching hash confirms that the evidence has not mutated while in custody. It does not certify the historical validity of the file prior to seizure.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

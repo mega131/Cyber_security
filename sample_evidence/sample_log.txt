@@ -1,0 +1,4 @@
+2026-11-14 20:15:01 [AUTH] User 'admin' logged in from 192.168.1.45
+2026-11-14 20:18:22 [FILE] Download request for /vault/classified_dataset.db
+2026-11-14 20:19:10 [ALERT] USB Mass Storage device connected (VID:0781, PID:5583)
+2026-11-14 20:20:00 [SYSTEM] Forensic snapshot initiated.

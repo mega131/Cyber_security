@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}Integrity Verification Portal | Forensic Analyzer{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <h2><span>🔒</span> Cryptographic File Integrity Verification</h2>
+    <p>Perform byte-level integrity verification by comparing a test artifact against the established SHA-256 baseline.</p>
+  </div>
+</div>
+
+<!-- Verification Outcome Banner (When POST submitted) -->
+{% if result %}
+  {% if result.success %}
+    {% if result.match %}
+      <div class="verification-banner match">
+        <div class="banner-icon match">✓</div>
+        <div style="flex: 1;">
+          <h3 style="color: var(--accent-green); font-size: 1.25rem; font-weight: 800; margin-bottom: 0.35rem;">
+            INTEGRITY VERIFIED: BITSTREAMS IDENTICAL
+          </h3>
+          <p style="color: var(--text-body); font-size: 0.9rem; margin-bottom: 0.85rem;">
+            {{ result.explanation }}
+          </p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-family: var(--font-mono); font-size: 0.8rem;">
+            <div style="background: #ffffff; padding: 0.75rem; border-radius: 8px; border: 1px solid #bbf7d0;">
+              <span style="color: var(--text-dim); font-weight: 600; display: block; margin-bottom: 2px;">Recorded Baseline SHA-256:</span>
+              <span style="color: var(--accent-primary); font-weight: 700; word-break: break-all;">{{ result.baseline_sha256 }}</span>
+            </div>
+            <div style="background: #ffffff; padding: 0.75rem; border-radius: 8px; border: 1px solid #bbf7d0;">
+              <span style="color: var(--text-dim); font-weight: 600; display: block; margin-bottom: 2px;">Test File SHA-256:</span>
+              <span style="color: var(--accent-green); font-weight: 700; word-break: break-all;">{{ result.test_sha256 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="verification-banner mismatch">
+        <div class="banner-icon mismatch">✕</div>
+        <div style="flex: 1;">
+          <h3 style="color: var(--accent-red); font-size: 1.25rem; font-weight: 800; margin-bottom: 0.35rem;">
+            INTEGRITY BREACH / HASH MISMATCH DETECTED
+          </h3>
+          <p style="color: var(--text-body); font-size: 0.9rem; margin-bottom: 0.85rem;">
+            {{ result.explanation }}
+          </p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-family: var(--font-mono); font-size: 0.8rem;">
+            <div style="background: #ffffff; padding: 0.75rem; border-radius: 8px; border: 1px solid #fecaca;">
+              <span style="color: var(--text-dim); font-weight: 600; display: block; margin-bottom: 2px;">Recorded Baseline SHA-256:</span>
+              <span style="color: var(--accent-primary); font-weight: 700; word-break: break-all;">{{ result.baseline_sha256 }}</span>
+            </div>
+            <div style="background: #ffffff; padding: 0.75rem; border-radius: 8px; border: 1px solid #fecaca;">
+              <span style="color: var(--text-dim); font-weight: 600; display: block; margin-bottom: 2px;">Test File SHA-256 (Modified):</span>
+              <span style="color: var(--accent-red); font-weight: 700; word-break: break-all;">{{ result.test_sha256 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="alert alert-error">
+      <span>Error: {{ result.error }}</span>
+    </div>
+  {% endif %}
+{% endif %}
+
+<div style="display: grid; grid-template-columns: 3fr 2fr; gap: 2rem; margin-bottom: 2rem;">
+  <!-- Verification Form -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title"><span>⚙️</span> Verify Artifact Against Vault Baseline</h3>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data">
+      <div class="form-group">
+        <label class="form-label" for="evidence_id">Select Baseline Evidence Item *</label>
+        <select name="evidence_id" id="evidence_id" class="form-control" required>
+          <option value="">-- Choose Ingested Evidence Record --</option>
+          {% for ev in evidence_list %}
+            <option value="{{ ev.evidence_id }}" {% if ev.evidence_id == preselected_id %}selected{% endif %}>
+              [{{ ev.evidence_id }}] {{ ev.original_filename }} ({{ ev.file_size_formatted }})
+            </option>
+          {% endfor %}
+        </select>
+        <small style="color: var(--text-dim); font-size: 0.75rem; font-weight: 500; display: block; margin-top: 4px;">
+          The system will retrieve the immutable SHA-256 digest recorded during initial intake.
+        </small>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Upload Evidence Item for Re-Verification *</label>
+        <div class="dropzone" style="padding: 2rem 1.5rem;">
+          <input type="file" name="test_file" class="file-input" required id="testFileInput">
+          <div class="dropzone-icon" style="font-size: 2.2rem; margin-bottom: 0.5rem;">🔒</div>
+          <h3 class="dropzone-text" style="font-size: 0.95rem;">Select or drop candidate file to verify</h3>
+          <p style="font-size: 0.78rem;">Calculates live SHA-256 hash in memory (non-invasive)</p>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+        <button type="submit" class="btn btn-primary" style="width: 100%;">
+          ⚡ Compare & Audit SHA-256 Hash
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Verification Explanation Card -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title"><span>📖</span> Cryptographic Verification Protocol</h3>
+    </div>
+    <div style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.6;">
+      <p style="margin-bottom: 0.85rem;">
+        In digital forensic proceedings, maintaining an unbroken <b>Chain of Custody</b> requires demonstrating that the evidence examined is bit-for-bit identical to the evidence seized.
+      </p>
+      <div style="background: #f0f9ff; border: 1px solid #bae6fd; padding: 0.85rem; border-radius: 8px; margin-bottom: 0.85rem;">
+        <b style="color: var(--accent-primary); display: block; margin-bottom: 2px;">The Avalanche Effect:</b>
+        Modifying even a single bit in a multi-gigabyte file alters on average 50% of the output bits in the SHA-256 digest, guaranteeing immediate detection of tampering.
+      </div>
+      <p style="font-size: 0.8rem; color: var(--text-dim);">
+        <b>Forensic Reminder:</b> A match verifies preservation since intake. It does not prove that the evidence was not forged prior to intake.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Verification Audit Log Table -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title"><span>📜</span> Recent Integrity Verification Audit Log</h3>
+  </div>
+
+  {% if recent_logs %}
+  <div class="table-responsive">
+    <table class="forensic-table">
+      <thead>
+        <tr>
+          <th>Audit Time</th>
+          <th>Evidence Target ID</th>
+          <th>Baseline Item</th>
+          <th>Tested File</th>
+          <th>Outcome</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in recent_logs %}
+        <tr>
+          <td style="color: var(--text-dim); font-size: 0.82rem;">{{ log.verified_at }}</td>
+          <td><span style="font-family: var(--font-mono); color: var(--accent-primary); font-weight: 600;">{{ log.evidence_id }}</span></td>
+          <td>{{ log.baseline_filename or 'Recorded Item' }}</td>
+          <td><b>{{ log.test_filename }}</b></td>
+          <td>
+            {% if log.match_status == 1 %}
+              <span class="badge badge-success">✓ MATCH (VERIFIED)</span>
+            {% else %}
+              <span class="badge badge-danger">✕ MISMATCH</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p style="text-align: center; padding: 2rem; color: var(--text-dim); font-size: 0.88rem;">
+    No verification checks have been logged yet.
+  </p>
+  {% endif %}
+</div>
+{% endblock %}
