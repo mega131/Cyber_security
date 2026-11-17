@@ -10,11 +10,13 @@ from app.config import Config
 from app.models.evidence import (
     save_evidence_record,
     get_all_evidence,
-    get_evidence_by_id
+    get_evidence_by_id,
+    get_blockchain
 )
 from app.services.hasher import calculate_hashes
 from app.services.validator import inspect_file_signature
 from app.services.metadata_extractor import extract_metadata
+from app.services.ai_analyzer import analyze_evidence_with_ai
 
 evidence_bp = Blueprint('evidence', __name__)
 
@@ -64,7 +66,6 @@ def upload():
         
         # Read-only attributes / non-destructive intake
         try:
-            # On Windows, keep read-only permissions
             os.chmod(str(save_path), 0o444)
         except Exception:
             pass
@@ -83,7 +84,26 @@ def upload():
         # 4. Deep Metadata Extraction
         metadata = extract_metadata(str(save_path), sig_info['detected_mime'])
         
-        # 5. Persist into SQLite
+        # 5. AI Forensic Threat Analysis
+        ai_result = analyze_evidence_with_ai(
+            original_filename=original_name,
+            declared_mime=file.content_type or 'application/octet-stream',
+            detected_mime=sig_info['detected_mime'],
+            signature_status=sig_info['status'],
+            signature_details=sig_info['details'],
+            file_size_bytes=size_bytes,
+            metadata=metadata
+        )
+        
+        # 6. Mine Block in Blockchain Ledger
+        chain = get_blockchain()
+        mined_block = chain.mine_evidence_block(
+            evidence_id=evidence_uuid,
+            case_number=case_number,
+            file_hash=hashes['sha256']
+        )
+        
+        # 7. Persist into SQLite
         record_data = {
             'evidence_id': evidence_uuid,
             'case_number': case_number,
@@ -101,11 +121,16 @@ def upload():
             'md5_hash': hashes['md5'],
             'sha256_hash': hashes['sha256'],
             'metadata_json': json.dumps(metadata),
-            'notes': notes
+            'notes': notes,
+            'ai_threat_level': ai_result['threat_level'],
+            'ai_risk_score': ai_result['risk_score'],
+            'ai_analysis_json': json.dumps(ai_result),
+            'block_index': mined_block['index_num'],
+            'block_hash': mined_block['block_hash']
         }
         
         save_evidence_record(record_data)
-        flash(f'Evidence "{original_name}" ingested and analyzed successfully with ID {evidence_uuid}.', 'success')
+        flash(f'Evidence "{original_name}" ingested, analyzed by AI, and anchored to Blockchain Block #{mined_block["index_num"]}.', 'success')
         return redirect(url_for('evidence.detail', evidence_id=evidence_uuid))
         
     return render_template('upload.html', allowed_extensions=sorted(list(Config.ALLOWED_EXTENSIONS)))

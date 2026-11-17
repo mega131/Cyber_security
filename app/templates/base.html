@@ -29,6 +29,7 @@
       <li><a href="{{ url_for('dashboard.index') }}" class="{% if request.endpoint == 'dashboard.index' %}active{% endif %}">📊 Dashboard</a></li>
       <li><a href="{{ url_for('evidence.upload') }}" class="{% if request.endpoint == 'evidence.upload' %}active{% endif %}">📥 Evidence Ingestion</a></li>
       <li><a href="{{ url_for('integrity.index') }}" class="{% if request.endpoint == 'integrity.index' %}active{% endif %}">🔒 Integrity Verification</a></li>
+      <li><a href="{{ url_for('blockchain.index') }}" class="{% if request.endpoint == 'blockchain.index' %}active{% endif %}">⛓️ Blockchain Ledger</a></li>
       <li><a href="{{ url_for('evidence.history') }}" class="{% if request.endpoint == 'evidence.history' %}active{% endif %}">📁 Evidence Repository</a></li>
     </ul>
 

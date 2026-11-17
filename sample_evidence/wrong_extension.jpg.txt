@@ -1,0 +1,8 @@
+DIGITAL FORENSIC TEST FILE
+
+Case ID: CASE-001
+Evidence: Sample company document
+Purpose: Testing file metadata and SHA-256 hashing.
+
+This is a sample file created for a digital
+forensics project demonstration.

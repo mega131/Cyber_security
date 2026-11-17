@@ -1,6 +1,5 @@
 import hashlib
 from app.services.hasher import calculate_hashes, calculate_stream_sha256
-from app.models.evidence import get_evidence_by_id, log_verification
 
 def verify_file_integrity(evidence_id, test_file_stream, test_filename):
     """
@@ -17,6 +16,7 @@ def verify_file_integrity(evidence_id, test_file_stream, test_filename):
             'explanation': str
         }
     """
+    from app.models.evidence import get_evidence_by_id, log_verification
     evidence = get_evidence_by_id(evidence_id)
     if not evidence:
         return {

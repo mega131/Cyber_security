@@ -40,6 +40,94 @@
 </div>
 {% endif %}
 
+<!-- AI Forensic Threat Assessment Card -->
+{% if evidence.ai_analysis %}
+{% set ai = evidence.ai_analysis %}
+<div class="card" style="margin-bottom: 1.5rem; border-left: 5px solid {% if ai.threat_level == 'CRITICAL' %}var(--accent-red){% elif ai.threat_level == 'SUSPICIOUS' %}var(--accent-amber){% elif ai.threat_level == 'ELEVATED' %}var(--accent-primary){% else %}var(--accent-green){% endif %};">
+  <div class="card-header">
+    <div style="display: flex; align-items: center; gap: 0.6rem;">
+      <h3 class="card-title"><span>🤖</span> AI Forensic Threat Assessment & Triage</h3>
+      <span class="badge badge-{{ ai.badge_class }}">{{ ai.threat_badge }}</span>
+    </div>
+    <div style="font-weight: 800; font-family: var(--font-mono); font-size: 0.95rem;">
+      Risk Score: 
+      <span style="color: {% if ai.risk_score >= 75 %}var(--accent-red){% elif ai.risk_score >= 50 %}var(--accent-amber){% else %}var(--accent-green){% endif %}; font-size: 1.15rem;">
+        {{ ai.risk_score }} / 100
+      </span>
+    </div>
+  </div>
+
+  <p style="font-size: 0.9rem; color: var(--text-body); margin-bottom: 1rem; line-height: 1.6;">
+    {{ ai.executive_summary }}
+  </p>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+    <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+      <h4 style="font-size: 0.8rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; text-transform: uppercase;">
+        Identified Risk Factors & Anomalies
+      </h4>
+      <ul style="list-style-type: none; font-size: 0.82rem; color: var(--text-muted); line-height: 1.6;">
+        {% for factor in ai.risk_factors %}
+          <li style="margin-bottom: 0.35rem;">⚠️ {{ factor }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+      <h4 style="font-size: 0.8rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; text-transform: uppercase;">
+        Actionable AI Recommendations
+      </h4>
+      <ul style="list-style-type: none; font-size: 0.82rem; color: var(--text-muted); line-height: 1.6;">
+        {% for rec in ai.recommendations %}
+          <li style="margin-bottom: 0.35rem;">✓ {{ rec }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Blockchain Anchor Card -->
+{% if evidence.block_info or evidence.block_hash %}
+{% set block = evidence.block_info %}
+<div class="card" style="margin-bottom: 1.5rem; border-left: 5px solid var(--accent-primary); background: #f0f9ff; border-color: #bae6fd;">
+  <div class="card-header" style="border-bottom-color: #bae6fd;">
+    <div style="display: flex; align-items: center; gap: 0.6rem;">
+      <h3 class="card-title" style="color: #0369a1;"><span>⛓️</span> Blockchain Proof of Custody (Anchored Block)</h3>
+      <span class="badge badge-success">IMMUTABLE BLOCK #{{ block.index_num if block else evidence.block_index }}</span>
+    </div>
+    <a href="{{ url_for('blockchain.index') }}" class="btn btn-secondary btn-sm" style="background: #ffffff;">
+      View in Blockchain Explorer &rarr;
+    </a>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.85rem; font-size: 0.84rem; margin-bottom: 0.85rem;">
+    <div>
+      <span style="color: var(--text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase;">Mining Timestamp:</span>
+      <div style="font-family: var(--font-mono); font-weight: 600; color: var(--text-main);">{{ block.timestamp if block else evidence.created_at }}</div>
+    </div>
+    <div>
+      <span style="color: var(--text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase;">PoW Mining Nonce:</span>
+      <div style="font-family: var(--font-mono); font-weight: 700; color: var(--text-main);">{{ block.nonce if block else 'Verified' }}</div>
+    </div>
+    <div>
+      <span style="color: var(--text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase;">Consensus Validation:</span>
+      <div style="color: var(--accent-green); font-weight: 700;">Verified SHA-256 Chain Link</div>
+    </div>
+  </div>
+
+  <div>
+    <span style="color: var(--text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; display: block; margin-bottom: 2px;">
+      Cryptographic Block Hash:
+    </span>
+    <div class="mono-box" style="background: #ffffff;">
+      <span>{{ block.block_hash if block else evidence.block_hash }}</span>
+      <button class="copy-btn" onclick="copyToClipboard('{{ block.block_hash if block else evidence.block_hash }}', this)">📋 Copy</button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <!-- Primary File Attributes & Chain of Custody -->
 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
   <!-- File Attributes -->

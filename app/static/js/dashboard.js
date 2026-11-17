@@ -1,10 +1,10 @@
-// Dashboard Chart.js Visualizations (Modern Clean Light Theme)
+// Dashboard Chart.js Visualizations (Modern Clean Light Theme with AI & Blockchain)
 document.addEventListener('DOMContentLoaded', () => {
   fetch('/api/stats')
     .then(res => res.json())
     .then(data => {
       initTypeChart(data.type_distribution);
-      initIntegrityChart(data.total_verifications, data.matched_count, data.mismatch_count);
+      initAIThreatChart(data.ai_threat_stats, data.matched_count, data.mismatch_count);
     })
     .catch(err => console.error('Failed to load dashboard metrics: ', err));
 });
@@ -51,21 +51,29 @@ function initTypeChart(distribution) {
   });
 }
 
-function initIntegrityChart(total, matched, mismatched) {
+function initAIThreatChart(aiThreatStats, matched, mismatched) {
   const ctx = document.getElementById('integrityChart');
   if (!ctx) return;
+  
+  const lowCount = (aiThreatStats && aiThreatStats.LOW) || 0;
+  const elevatedCount = (aiThreatStats && aiThreatStats.ELEVATED) || 0;
+  const suspiciousCount = (aiThreatStats && aiThreatStats.SUSPICIOUS) || 0;
+  const criticalCount = (aiThreatStats && aiThreatStats.CRITICAL) || 0;
   
   new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: ['Total Audits', 'Verified Matches', 'Mismatches'],
+      labels: ['AI Safe (Low)', 'AI Elevated', 'AI Suspicious', 'AI Critical', 'Hash Verified', 'Hash Breach'],
       datasets: [{
-        label: 'Verifications',
-        data: [total, matched, mismatched],
+        label: 'Artifacts',
+        data: [lowCount, elevatedCount, suspiciousCount, criticalCount, matched, mismatched],
         backgroundColor: [
-          '#0284c7',
-          '#16a34a',
-          '#dc2626'
+          '#16a34a', // Low - Green
+          '#0284c7', // Elevated - Sky
+          '#d97706', // Suspicious - Amber
+          '#dc2626', // Critical - Red
+          '#10b981', // Hash Verified - Emerald
+          '#ef4444'  // Hash Breach - Red
         ],
         borderRadius: 8
       }]

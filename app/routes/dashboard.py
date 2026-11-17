@@ -17,6 +17,8 @@ def stats_api():
         'total_verifications': metrics['total_verifications'],
         'matched_count': metrics['matched_count'],
         'mismatch_count': metrics['mismatch_count'],
+        'total_blocks': metrics['total_blocks'],
+        'ai_threat_stats': metrics['ai_threat_stats'],
         'type_distribution': metrics['type_distribution'],
         'signature_stats': metrics['signature_stats']
     })

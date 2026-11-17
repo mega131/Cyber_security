@@ -5,5 +5,6 @@ from app.models.evidence import (
     get_evidence_by_id,
     log_verification,
     get_verification_logs,
-    get_dashboard_metrics
+    get_dashboard_metrics,
+    get_blockchain
 )

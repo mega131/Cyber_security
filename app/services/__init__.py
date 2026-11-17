@@ -3,3 +3,5 @@ from app.services.validator import inspect_file_signature
 from app.services.metadata_extractor import extract_metadata
 from app.services.integrity_service import verify_file_integrity
 from app.services.report_generator import build_pdf_report
+from app.services.blockchain import ForensicBlockchain, calculate_block_hash
+from app.services.ai_analyzer import analyze_evidence_with_ai

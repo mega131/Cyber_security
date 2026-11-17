@@ -5,6 +5,7 @@ from app.routes.dashboard import dashboard_bp
 from app.routes.evidence import evidence_bp
 from app.routes.integrity import integrity_bp
 from app.routes.reports import reports_bp
+from app.routes.blockchain import blockchain_bp
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -14,7 +15,7 @@ def create_app(config_class=Config):
     Config.UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
     Config.DATA_FOLDER.mkdir(parents=True, exist_ok=True)
 
-    # Initialize SQLite tables
+    # Initialize SQLite tables and Genesis Block
     with app.app_context():
         init_db()
 
@@ -23,5 +24,6 @@ def create_app(config_class=Config):
     app.register_blueprint(evidence_bp)
     app.register_blueprint(integrity_bp)
     app.register_blueprint(reports_bp)
+    app.register_blueprint(blockchain_bp)
 
     return app

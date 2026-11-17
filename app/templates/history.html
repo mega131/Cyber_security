@@ -50,10 +50,10 @@
           <th>Evidence ID</th>
           <th>Case Ref</th>
           <th>Filename</th>
-          <th>Type / MIME</th>
+          <th>AI Threat Level</th>
+          <th>Blockchain Block</th>
           <th>Size</th>
           <th>SHA-256 Digest</th>
-          <th>Ingestion Date</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -64,7 +64,24 @@
           <td><span class="badge badge-info">{{ r.case_number }}</span></td>
           <td><b>{{ r.original_filename }}</b></td>
           <td>
-            <span style="font-size: 0.82rem; color: var(--text-muted);">{{ r.detected_type_label }}</span>
+            {% if r.ai_threat_level == 'CRITICAL' %}
+              <span class="badge badge-danger">CRITICAL THREAT</span>
+            {% elif r.ai_threat_level == 'SUSPICIOUS' %}
+              <span class="badge badge-warning">SUSPICIOUS</span>
+            {% elif r.ai_threat_level == 'ELEVATED' %}
+              <span class="badge badge-info">ELEVATED</span>
+            {% else %}
+              <span class="badge badge-success">LOW / SAFE</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if r.block_index %}
+              <a href="{{ url_for('blockchain.index') }}" style="font-family: var(--font-mono); font-weight: 700; color: var(--accent-primary); text-decoration: none;">
+                Block #{{ r.block_index }}
+              </a>
+            {% else %}
+              <span style="color: var(--text-dim); font-size: 0.8rem;">Anchored</span>
+            {% endif %}
           </td>
           <td>{{ r.file_size_formatted }}</td>
           <td>

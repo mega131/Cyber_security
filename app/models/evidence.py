@@ -10,9 +10,15 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+def get_blockchain():
+    from app.services.blockchain import ForensicBlockchain
+    return ForensicBlockchain(get_db_connection)
+
 def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
+    
+    # 1. Evidence Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS evidence (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,9 +39,30 @@ def init_db():
             sha256_hash TEXT NOT NULL,
             metadata_json TEXT,
             notes TEXT,
+            ai_threat_level TEXT DEFAULT 'LOW',
+            ai_risk_score INTEGER DEFAULT 10,
+            ai_analysis_json TEXT,
+            block_index INTEGER DEFAULT 0,
+            block_hash TEXT DEFAULT '',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    
+    # Check if migration needed for existing tables
+    cursor.execute("PRAGMA table_info(evidence)")
+    existing_cols = [row['name'] for row in cursor.fetchall()]
+    new_cols = [
+        ('ai_threat_level', "TEXT DEFAULT 'LOW'"),
+        ('ai_risk_score', "INTEGER DEFAULT 10"),
+        ('ai_analysis_json', "TEXT"),
+        ('block_index', "INTEGER DEFAULT 0"),
+        ('block_hash', "TEXT DEFAULT ''")
+    ]
+    for col_name, col_def in new_cols:
+        if col_name not in existing_cols:
+            cursor.execute(f"ALTER TABLE evidence ADD COLUMN {col_name} {col_def}")
+            
+    # 2. Verification Logs Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS verification_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,8 +75,26 @@ def init_db():
             FOREIGN KEY (evidence_id) REFERENCES evidence (evidence_id)
         )
     ''')
+    
+    # 3. Cryptographic Blockchain Ledger Table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS blockchain (
+            index_num INTEGER PRIMARY KEY,
+            timestamp TEXT NOT NULL,
+            evidence_id TEXT NOT NULL,
+            case_number TEXT NOT NULL,
+            file_hash TEXT NOT NULL,
+            previous_hash TEXT NOT NULL,
+            nonce INTEGER NOT NULL,
+            block_hash TEXT NOT NULL
+        )
+    ''')
     conn.commit()
     conn.close()
+
+    # Initialize Genesis block if blockchain is empty
+    chain = get_blockchain()
+    chain.init_chain()
 
 def save_evidence_record(data):
     conn = get_db_connection()
@@ -60,12 +105,14 @@ def save_evidence_record(data):
             evidence_id, case_number, examiner_name, original_filename,
             stored_filename, file_extension, file_size_bytes, file_size_formatted,
             declared_mime, detected_mime, detected_type_label, signature_status,
-            signature_details, md5_hash, sha256_hash, metadata_json, notes
+            signature_details, md5_hash, sha256_hash, metadata_json, notes,
+            ai_threat_level, ai_risk_score, ai_analysis_json, block_index, block_hash
         ) VALUES (
             :evidence_id, :case_number, :examiner_name, :original_filename,
             :stored_filename, :file_extension, :file_size_bytes, :file_size_formatted,
             :declared_mime, :detected_mime, :detected_type_label, :signature_status,
-            :signature_details, :md5_hash, :sha256_hash, :metadata_json, :notes
+            :signature_details, :md5_hash, :sha256_hash, :metadata_json, :notes,
+            :ai_threat_level, :ai_risk_score, :ai_analysis_json, :block_index, :block_hash
         )
     ''', data)
     conn.commit()
@@ -78,9 +125,9 @@ def get_all_evidence(search=None, file_type=None, limit=50):
     params = []
     
     if search:
-        query += ' AND (original_filename LIKE ? OR evidence_id LIKE ? OR case_number LIKE ? OR sha256_hash LIKE ?)'
+        query += ' AND (original_filename LIKE ? OR evidence_id LIKE ? OR case_number LIKE ? OR sha256_hash LIKE ? OR ai_threat_level LIKE ?)'
         wildcard = f'%{search}%'
-        params.extend([wildcard, wildcard, wildcard, wildcard])
+        params.extend([wildcard, wildcard, wildcard, wildcard, wildcard])
     
     if file_type and file_type != 'all':
         query += ' AND detected_type_label LIKE ?'
@@ -102,6 +149,7 @@ def get_evidence_by_id(evidence_id):
     conn.close()
     if row:
         d = dict(row)
+        # Parse metadata
         if d.get('metadata_json'):
             try:
                 d['metadata'] = json.loads(d['metadata_json'])
@@ -109,6 +157,20 @@ def get_evidence_by_id(evidence_id):
                 d['metadata'] = {}
         else:
             d['metadata'] = {}
+            
+        # Parse AI analysis
+        if d.get('ai_analysis_json'):
+            try:
+                d['ai_analysis'] = json.loads(d['ai_analysis_json'])
+            except Exception:
+                d['ai_analysis'] = None
+        else:
+            d['ai_analysis'] = None
+            
+        # Retrieve Block Info
+        chain = get_blockchain()
+        d['block_info'] = chain.get_block_by_evidence_id(evidence_id)
+        
         return d
     return None
 
@@ -147,7 +209,7 @@ def get_dashboard_metrics():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Total evidence count
+    # Total evidence count & size
     cursor.execute('SELECT COUNT(*) as total_count, COALESCE(SUM(file_size_bytes), 0) as total_bytes FROM evidence')
     totals = cursor.fetchone()
     total_count = totals['total_count']
@@ -158,9 +220,18 @@ def get_dashboard_metrics():
     v_stats = cursor.fetchone()
     total_verifications = v_stats['total_verifications']
     matched_count = v_stats['matched_count']
-    
-    # Mismatch count
     mismatch_count = total_verifications - matched_count
+    
+    # Blockchain blocks count
+    cursor.execute('SELECT COUNT(*) as total_blocks FROM blockchain')
+    total_blocks = cursor.fetchone()['total_blocks']
+    
+    # AI Threat Level Breakdown
+    cursor.execute('SELECT ai_threat_level, COUNT(*) as count FROM evidence GROUP BY ai_threat_level')
+    threat_rows = cursor.fetchall()
+    ai_threat_stats = {r['ai_threat_level']: r['count'] for r in threat_rows}
+    for lvl in ['LOW', 'ELEVATED', 'SUSPICIOUS', 'CRITICAL']:
+        ai_threat_stats.setdefault(lvl, 0)
     
     # Type distribution
     cursor.execute('''
@@ -197,6 +268,8 @@ def get_dashboard_metrics():
         'total_verifications': total_verifications,
         'matched_count': matched_count,
         'mismatch_count': mismatch_count,
+        'total_blocks': total_blocks,
+        'ai_threat_stats': ai_threat_stats,
         'type_distribution': type_distribution,
         'signature_stats': sig_stats,
         'recent_evidence': recent_evidence
